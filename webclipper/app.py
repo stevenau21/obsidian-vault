@@ -28,6 +28,10 @@ BUILTIN_TEMPLATES = [
 class FolderCreate(BaseModel):
     path: str
 
+class FolderRename(BaseModel):
+    old_path: str
+    new_name: str
+
 class PrefsUpdate(BaseModel):
     favorites: list[str] | None = None
     lastFolder: str | None = None
@@ -200,6 +204,8 @@ textarea{min-height:160px;resize:vertical;font-family:inherit;line-height:1.5}
 .fold-item .name{flex:1;font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fold-item .star-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;color:var(--muted);font-size:1rem;cursor:pointer;border-radius:50%;flex-shrink:0}
 .fold-item .star-btn.active{color:#fbbf24}
+.fold-item .rename-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:none;color:var(--muted);font-size:.85rem;cursor:pointer;border-radius:50%;flex-shrink:0;opacity:.5;transition:opacity .15s}
+.fold-item .rename-btn:active{opacity:1;background:rgba(124,111,240,.1)}
 .fold-item .chevron{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .2s}
 .fold-item .chevron.open{transform:rotate(90deg)}
 .fold-children{padding-left:20px;overflow:hidden;max-height:0}
@@ -628,6 +634,29 @@ function buildTree(f) {
   return t;
 }
 
+async function renameFolder(path) {
+  var label = path.replace(/\/$/,'').split('/').pop();
+  var newName = prompt('Rename "' + label + '" to:', label);
+  if (!newName || newName === label) return;
+  newName = newName.trim();
+  if (!newName) return;
+  if (newName.includes('/')) { alert('Name cannot contain slashes'); return; }
+  try {
+    var r = await fetch('/api/folders/rename', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({old_path: path.replace(/^\//,'').replace(/\/$/,''), new_name: newName})
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    await loadFolders();
+    flatFolders = allFolders;
+    renderModalFolders();
+    // Re-pick if the renamed folder was selected
+    var newPath = path.replace(/\/[^/]+\/?$/, '/') + newName + '/';
+    if (selectedFolder === path) pickFolder(newPath);
+  } catch(e) { alert('Rename error: ' + e.message); }
+}
+
 function renderModalFolders() {
   var list = document.getElementById('foldList');
   var rootHtml = '<div class="fold-item" onclick="pickFolder(\'/\')">' +
@@ -644,6 +673,7 @@ function renderModalFolders() {
     html += '<div class="fold-item" onclick="pickFolder(\''+f+'\')" data-path="'+f+'" style="padding-left:'+Math.min(16 + depth*12,64)+'px"' + sel + '>' +
       '<span class="icon">&#128193;</span>' +
       '<span class="name">'+label+'</span>' +
+      '<span class="rename-btn" onclick="event.stopPropagation();renameFolder(\''+f+'\')">&#9998;</span>' +
       '<span class="star-btn'+starCls+'" onclick="event.stopPropagation();toggleFav(\''+f+'\')">&#9733;</span></div>';
   }
   list.innerHTML = rootHtml + html;
@@ -940,6 +970,28 @@ async def create_folder(data: FolderCreate):
     try:
         os.makedirs(full, exist_ok=True)
         return {"success": True, "path": path}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/api/folders/rename")
+async def rename_folder(data: FolderRename):
+    old = data.old_path.strip().strip("/")
+    new_name = data.new_name.strip().strip("/")
+    if not old or not new_name:
+        raise HTTPException(400, "Old path and new name are required")
+    if "/" in new_name:
+        raise HTTPException(400, "New name must be a single folder name, not a path")
+    old_full = os.path.join(VAULT_PATH, old)
+    parent = os.path.dirname(old_full)
+    new_full = os.path.join(parent, new_name)
+    if not os.path.isdir(old_full):
+        raise HTTPException(404, "Folder not found")
+    if os.path.exists(new_full):
+        raise HTTPException(409, "A folder with that name already exists")
+    try:
+        os.rename(old_full, new_full)
+        new_path = os.path.join(os.path.dirname(old), new_name)
+        return {"success": True, "old_path": old, "new_path": new_path}
     except Exception as e:
         raise HTTPException(500, str(e))
 
