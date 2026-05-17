@@ -10,7 +10,7 @@ services:
       - TZ=America/New_York
       - TITLE=Obsidian
     volumes:
-      - ${HOME}/obsidian-vault:/config
+      - ./config:/config
     ports:
       - '8511:3000'
       - '27123:27123'
@@ -40,7 +40,7 @@ services:
       - VAULT_PATH=/vault/Desktop/xeveno
       - PREFS_PATH=/vault/.webclipper
     volumes:
-      - ${HOME}/obsidian-vault:/vault
+      - ./config:/vault
     ports:
       - '8900:8000'
     depends_on:

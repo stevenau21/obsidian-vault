@@ -15,7 +15,20 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Config (contains vault data)
-config/Desktop/xeveno/.trash/
-config/Desktop/xeveno/.obsidian/
+# Config — ignore all mounted user-home junk, track only vault data
+config/.XDG/
+config/.bashrc
+config/.cache/
+config/.config/
+config/.local/
+config/.obsidian-cli.sock
+config/.pki/
+config/ssl/
 config/.webclipper/prefs.json
+
+# Obsidian vault auto-generated files
+config/**/.obsidian/
+config/**/.trash/
+
+# Uploaded images (runtime data)
+webclipper/static/uploads/*.png
