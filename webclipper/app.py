@@ -842,7 +842,7 @@ async function savePrefs() {
 // ---- New Folder ----
 async function createNewFolder() {
   var input=document.getElementById('newFolderInput');var name=input.value.trim();if(!name)return;
-  var path=(selectedFolder==='/'?'/':selectedFolder)+name;
+  var path=(selectedFolder==='/'?'/':selectedFolder+'/')+name;
   if(!path.endsWith('/'))path+='/';
   try{
     var r=await fetch('/api/folders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:path.replace(/^\//,'').replace(/\/$/,'')})});
