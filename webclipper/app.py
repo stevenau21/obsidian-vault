@@ -209,7 +209,7 @@ textarea{min-height:160px;resize:vertical;font-family:inherit;line-height:1.5}
 .fold-item .chevron{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .2s}
 .fold-item .chevron.open{transform:rotate(90deg)}
 .fold-children{padding-left:20px;overflow:hidden;max-height:0}
-.fold-create{padding:8px 12px 4px;display:flex;gap:6px;flex-shrink:0}
+.fold-create{padding:8px 12px 4px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0}
 .fold-create input{flex:1;padding:10px 12px;font-size:.85rem;border-radius:var(--radius-sm)}
 .fold-create button{width:auto;padding:10px 16px;font-size:.82rem;font-weight:600;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
 .fold-create button:active{transform:scale(.96)}
@@ -386,6 +386,7 @@ textarea{min-height:160px;resize:vertical;font-family:inherit;line-height:1.5}
     </div>
   </div>
   <div class="fold-create">
+    <span id="parentHint" style="display:block;padding:0 0 6px;font-size:.75rem;color:var(--muted);width:100%">Parent: /</span>
     <input type="text" id="newFolderInput" placeholder="New folder name...">
     <button onclick="createNewFolder()">Create</button>
   </div>
@@ -659,7 +660,7 @@ async function renameFolder(path) {
 
 function renderModalFolders() {
   var list = document.getElementById('foldList');
-  var rootHtml = '<div class="fold-item" onclick="pickFolder(\'/\')">' +
+  var rootHtml = '<div class="fold-item" onclick="selectParentFolder(\'/\')">' +
     '<span class="icon">/</span><span class="name">Root</span>' +
     '<span class="star-btn' + (favorites.indexOf('/')>=0?' active':'') + '" onclick="event.stopPropagation();toggleFav(\'/\')">&#9733;</span></div>';
   var html = '';
@@ -670,22 +671,33 @@ function renderModalFolders() {
     var label = f.replace(/\/$/,'').split('/').pop();
     var sel = f===selectedFolder ? ' style="background:rgba(124,111,240,.1);border:1px solid rgba(124,111,240,.2)"' : '';
     var starCls = favorites.indexOf(f)>=0 ? ' active' : '';
-    html += '<div class="fold-item" onclick="pickFolder(\''+f+'\')" data-path="'+f+'" style="padding-left:'+Math.min(16 + depth*12,64)+'px"' + sel + '>' +
+    html += '<div class="fold-item" onclick="selectParentFolder(\''+f+'\')" data-path="'+f+'" style="padding-left:'+Math.min(16 + depth*12,64)+'px"' + sel + '>' +
       '<span class="icon">&#128193;</span>' +
       '<span class="name">'+label+'</span>' +
       '<span class="rename-btn" onclick="event.stopPropagation();renameFolder(\''+f+'\')">&#9998;</span>' +
       '<span class="star-btn'+starCls+'" onclick="event.stopPropagation();toggleFav(\''+f+'\')">&#9733;</span></div>';
   }
   list.innerHTML = rootHtml + html;
+  updateParentHint();
 }
 
-function pickFolder(path) {
+function selectParentFolder(path) {
   selectedFolder = path;
   document.getElementById('folderInput').value = path;
   document.getElementById('folderLabel').textContent = path;
+  renderFavRow();
+  renderModalFolders();
+}
+
+function updateParentHint() {
+  var hint = document.getElementById('parentHint');
+  if (hint) hint.textContent = 'Parent: ' + (selectedFolder === '/' ? 'Root' : selectedFolder);
+}
+
+function pickFolder(path) {
+  selectParentFolder(path);
   closeFolderModal();
   gsap.fromTo('#folderLabel', {scale:1.05}, {scale:1,duration:.2});
-  renderFavRow();
   loadTags();
 }
 
