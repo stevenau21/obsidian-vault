@@ -1,0 +1,64 @@
+services:
+  obsidian:
+    image: lscr.io/linuxserver/obsidian:latest
+    container_name: obsidian
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - TITLE=Obsidian
+    volumes:
+      - ./config:/config
+    ports:
+      - '8511:3000'
+      - '27123:27123'
+    shm_size: 2gb
+    restart: always
+    healthcheck:
+      test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/3000' || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+
+  webclipper:
+    build: ./webclipper
+    container_name: obsidian-webclipper
+    restart: always
+    user: "1000:1000"
+    environment:
+      - OBSIDIAN_API=http://obsidian:27123
+      - API_KEY=5aedcbaddd29c03da871e0b2bb098a3057cf40454cd2b5382f356f95bc3fd8d8
+      - DEFAULT_FOLDER=/
+      - VAULT_PATH=/vault/Desktop/xeveno
+      - PREFS_PATH=/vault/.webclipper
+    volumes:
+      - ./config:/vault
+    ports:
+      - '8900:8000'
+    depends_on:
+      - obsidian
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.5.0
+    container_name: obsidian-cloudflared
+    restart: always
+    command: tunnel --config /etc/cloudflared/config.yml --no-autoupdate run --protocol http2
+    volumes:
+      - /home/steve/.cloudflared-obsidian/config.yml:/etc/cloudflared/config.yml:ro
+      - /home/steve/.cloudflared:/home/steve/.cloudflared:ro
+    depends_on:
+      - obsidian
+      - webclipper

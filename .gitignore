@@ -1,0 +1,21 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+*.egg-info/
+
+# Logs
+*.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Config (contains vault data)
+config/Desktop/xeveno/.trash/
+config/Desktop/xeveno/.obsidian/
+config/.webclipper/prefs.json
