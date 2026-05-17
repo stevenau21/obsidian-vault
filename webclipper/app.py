@@ -1,12 +1,24 @@
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import httpx
 import re
 import os
 import json
+import uuid
+from urllib.parse import quote
 
 app = FastAPI(title="Obsidian WebClipper")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
+)
 
 OBSIDIAN_API = os.getenv("OBSIDIAN_API", "http://obsidian:27123")
 API_KEY = os.getenv("API_KEY", "")
@@ -14,6 +26,12 @@ HEADERS = {"Authorization": f"Bearer {API_KEY}"} if API_KEY else {}
 VAULT_PATH = os.getenv("VAULT_PATH", "/vault/Desktop/xeveno")
 PREFS_PATH = os.getenv("PREFS_PATH", "/vault/.webclipper")
 YOUTUBE_PROXY = os.getenv("YOUTUBE_PROXY", "http://host.docker.internal:5000")
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://clipper.brandformance.app").rstrip("/")
+STATIC_DIR = "static"
+UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 BUILTIN_TEMPLATES = [
     {"id": "goal", "name": "Goal", "fields": [
@@ -472,6 +490,19 @@ function stopVoiceWaves() {
   }
 }
 
+function insertUploadedImageFromQuery() {
+  var params = new URLSearchParams(window.location.search);
+  var link = params.get('insert_link');
+  if (link) {
+    var content = document.getElementById('content');
+    if (content) {
+      content.value = '![](' + link + ')\n\n' + content.value;
+      content.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
 function initVoiceInput() {
   var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   var btn = document.getElementById('voiceBtn');
@@ -899,6 +930,7 @@ async function createNote(e) {
 // ---- Events ----
 document.addEventListener('DOMContentLoaded',function(){
   initAnim();
+  insertUploadedImageFromQuery();
   loadFolders();loadTags();loadPrefs();loadTemplates();
 
   document.getElementById('folderBtn').addEventListener('click',function(){animFolderModal(true);});
@@ -1286,6 +1318,19 @@ async def delete_note(path: str):
     if r.status_code not in (200, 201, 204):
         raise HTTPException(status_code=r.status_code, detail=r.text[:200])
     return {"success": True, "path": "/" + path.lstrip("/")}
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    ext = os.path.splitext(file.filename or "sketch.png")[1].lower() if file.filename else ".png"
+    name = f"sketch_{uuid.uuid4().hex}{ext}"
+    path = os.path.join(UPLOAD_DIR, name)
+    content = await file.read()
+    with open(path, "wb") as f:
+        f.write(content)
+    public_url = f"{PUBLIC_BASE_URL}/static/uploads/{name}"
+    markdown_link = f"![Saber Sketch]({public_url})"
+    redirect_url = f"{PUBLIC_BASE_URL}/?insert_link={quote(markdown_link)}"
+    return {"success": True, "markdown_link": markdown_link, "public_url": public_url, "redirect_url": redirect_url}
 
 @app.get("/health")
 async def health():

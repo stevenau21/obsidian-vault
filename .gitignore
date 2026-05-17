@@ -15,7 +15,8 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Config (contains vault data)
-config/Desktop/xeveno/.trash/
-config/Desktop/xeveno/.obsidian/
-config/.webclipper/prefs.json
+# Config (mounted user home, never track)
+config/
+
+# Uploaded images (runtime data)
+webclipper/static/uploads/*.png

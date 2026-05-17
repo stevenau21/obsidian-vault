@@ -39,8 +39,10 @@ services:
       - DEFAULT_FOLDER=/
       - VAULT_PATH=/vault/Desktop/xeveno
       - PREFS_PATH=/vault/.webclipper
+      - PUBLIC_BASE_URL=https://clipper.brandformance.app
     volumes:
       - ./config:/vault
+      - ./webclipper/static:/app/static
     ports:
       - '8900:8000'
     depends_on:
