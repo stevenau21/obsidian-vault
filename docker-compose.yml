@@ -39,6 +39,7 @@ services:
       - DEFAULT_FOLDER=/
       - VAULT_PATH=/vault/Desktop/xeveno
       - PREFS_PATH=/vault/.webclipper
+      - YOUTUBE_PROXY=http://host.docker.internal:8504
     volumes:
       - ./config:/vault
     ports:
