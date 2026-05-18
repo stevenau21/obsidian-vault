@@ -913,7 +913,9 @@ async function createNote(e) {
     renderTemplateFields(selectedTemplate);
   }
   try{
-    var r=await fetch('/api/create',{method:'POST',body:form});var data=await r.json();
+    var r=await fetch('/api/create',{method:'POST',body:form});
+    var data;
+    try { data = await r.json(); } catch(e) { throw new Error('Server error (status '+r.status+')'); }
     if(r.ok&&data.success){
       if(data.duplicate){
         result.className='error';result.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Already processed — see <a href="#" style="color:var(--accent);text-decoration:underline" onclick="event.preventDefault();document.getElementById(\'folderInput\').value=\''+data.existing.replace(/\/[^\/]+\.md$/,'')+'\';document.getElementById(\'folderLabel\').textContent=\''+data.existing.replace(/\/[^\/]+\.md$/,'')+'\';selectedFolder=\''+data.existing.replace(/\/[^\/]+\.md$/,'')+'\'">'+data.existing+'</a>';
